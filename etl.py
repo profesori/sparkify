@@ -6,6 +6,11 @@ from sql_queries import *
 
 
 def process_song_file(cur, filepath):
+    """
+    - Reads a song data json file
+    - Insert song and artist data in DB
+    """
+    
     # open song file
     df = pd.read_json(filepath, lines=True)
 
@@ -19,6 +24,13 @@ def process_song_file(cur, filepath):
 
 
 def process_log_file(cur, filepath):
+    """
+    - Reads a log data json file
+    - Insert time data records in DB
+    - Insert user data in DB
+    - Insert fact data to songplays table
+    """
+    
     # open log file
     df = pd.read_json(filepath, lines=True)
 
@@ -29,7 +41,7 @@ def process_log_file(cur, filepath):
     t = pd.to_datetime(df['ts'], unit='ms')
     
     # insert time data records
-    time_data = (t.astype('int64') // 10 ** 6, t.dt.hour, t.dt.day, t.dt.isocalendar().week, t.dt.month, t.dt.year, t.dt.isocalendar().day)
+    time_data = (t, t.dt.hour, t.dt.day, t.dt.isocalendar().week, t.dt.month, t.dt.year, t.dt.isocalendar().day)
     column_labels = ('TimeStamp', 'Hour', 'Day', 'Week', 'Month', 'Year', 'Weekday')
     time_df = pd.DataFrame(dict(zip(column_labels, time_data)))
 
@@ -56,11 +68,15 @@ def process_log_file(cur, filepath):
             songid, artistid = None, None
 
         # insert songplay record
-        songplay_data = (row['ts'], row['userId'], row['level'], songid, artistid, row['sessionId'], row['location'], row['userAgent']) 
+        songplay_data = (pd.to_datetime(row['ts'], unit='ms'), row['userId'], row['level'], songid, artistid, row['sessionId'], row['location'], row['userAgent']) 
         cur.execute(songplay_table_insert, songplay_data)
 
 
 def process_data(cur, conn, filepath, func):
+    """
+    - Loop over all log files and process data
+    """
+    
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
@@ -80,6 +96,10 @@ def process_data(cur, conn, filepath, func):
 
 
 def main():
+    """
+    - Connects to the DB
+    - Calls process_data function for each log data folder
+    """
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=rudithoma password=")
     cur = conn.cursor()
 
